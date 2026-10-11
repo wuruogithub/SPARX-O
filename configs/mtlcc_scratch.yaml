@@ -1,0 +1,121 @@
+seed: 42
+
+data:
+  dataset: mtlcc
+  root: /path/to/mtlcc_memmap
+  storage_format: memmap_v1
+  split_files:
+    train: train_fold0.tileids
+    val: eval.tileids
+    test: test_fold0.tileids
+  crop_size: 24
+  eval_crop_size: 24
+  num_workers: 8
+  persistent_workers: true
+  prefetch_factor: 3
+  subset_seed: 42
+  sample_rng_mode: worker
+  stage_limits: {train: null, val: null, test: null}
+  temporal_keep_range: [0.85, 1.00]
+  s2_norm_file: stats_10band.json
+  s2_normalization: mtlcc_train_zscore_10band
+  ignore_index: 255
+  class_names:
+    - Sugar beet
+    - Summer oat
+    - Meadow
+    - Rape
+    - Hop
+    - Winter spelt
+    - Winter triticale
+    - Beans
+    - Peas
+    - Potato
+    - Soybeans
+    - Asparagus
+    - Winter wheat
+    - Winter barley
+    - Winter rye
+    - Summer barley
+    - Maize
+
+model:
+  architecture: sparxo
+  num_classes: 17
+  input_channels: 10
+  dim: 160
+  state_dim: 64
+  temporal_heads: 8
+  temporal_layers: 2
+  decoder_depth: 6
+  unet_base_channels: 64
+  dropout: 0.10
+  complex_state: true
+  physical_time: true
+  trapezoidal: true
+  adaptive_pool: true
+  temporal_mask_probability: 0.05
+  boundary_shape_depth: 2
+
+loss:
+  ce_weight: 1.0
+  focal_gamma: 0.0
+  dice_weight: 0.2
+  lovasz_weight: 0.3
+  boundary_weight: 0.1
+  boundary_consistency_weight: 0.03
+  affinity_weight: 0.05
+  deep_supervision_weight: 0.0
+  auxiliary_weight: 0.0
+  anchor_weight: 0.0
+  region_weight: 0.0
+  region_compactness_weight: 0.0
+  distillation_weight: 0.0
+  inheritance_weight: 0.0
+  temporal_reconstruction_weight: 0.0
+  label_smoothing: 0.01
+  class_weights: null
+
+train:
+  max_parameters: 12000000
+  require_init: false
+  init_shape_mismatch_prefixes: [decoder.classifier., decoder.semantic_refiner.]
+  epochs: 120
+  batch_size: 28
+  eval_batch_size: 28
+  accumulate_steps: 1
+  target_global_batch: 112
+  learning_rate: 0.00026
+  backbone_lr_multiplier: 1.0
+  freeze_legacy: false
+  select_initial_validation: false
+  min_learning_rate: 0.000002
+  weight_decay: 0.02
+  warmup_epochs: 5
+  warmup_factor: 0.001
+  lr_scheduler: poly
+  poly_power: 0.9
+  optimizer_betas: [0.9, 0.999]
+  grad_clip: 1.0
+  amp: true
+  compile: false
+  validate_every: 2
+  validate_every_switch_epoch: 50
+  validate_every_late: 1
+  early_stopping_patience: 20
+  early_stopping_min_epoch: 70
+  ema_start_epoch: 10
+  ema_decay: 0.999
+  ema_update_every: 2
+  test_time_augmentation: false
+  pipeline_contract:
+    s2_normalization: mtlcc_train_zscore_10band
+    sample_rng_mode: worker
+    require_fixed_global_batch: true
+    require_unweighted_ce: true
+
+output:
+  dir: outputs/mtlcc_scratch
+  save_last: true
+  save_top_k: 3
+  save_visualizations: 8

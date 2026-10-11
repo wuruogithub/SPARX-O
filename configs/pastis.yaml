@@ -1,0 +1,119 @@
+seed: 42
+experiment_version: sparxo-v2.u.4
+
+data:
+  root: /path/to/PASTIS-R
+  split_dir: null
+  folds: {train: [1, 2, 3], val: [4], test: [5]}
+  modalities: [s2]
+  crop_size: 32
+  eval_crop_size: 128
+  train_crops_per_tile: 4
+  num_workers: 8
+  subset_seed: 42
+  stage_limits: {train: null, val: null, test: null}
+  temporal_dropout: {s2: 0.10}
+  temporal_sampling: {mode: none}
+  eval_temporal_sampling: {mode: none}
+  class_aware_sampling: true
+  sampling_mode: global_class_centered
+  sampling_probability_formula:
+    name: normalized_entropy_deficit
+    ignore_classes: [19]
+    quantization: floor
+    step: 0.05
+    minimum: 0.0
+    maximum: 0.5
+  sampling_expected_probability: 0.35
+  sampling_min_crops_per_class: 12
+  sampling_weight_formula:
+    name: enet_inverse_log
+    offset: 1.02
+    ignore_classes: [19]
+    zero_weight_classes: [0, 19]
+    normalize_mean: true
+    round_decimals: 6
+  sampling_expected_quota:
+    [0, 30, 51, 43, 97, 103, 145, 130, 81, 137,
+     138, 123, 128, 165, 108, 120, 123, 153, 162, 0]
+  s2_clip: [-2000.0, 12000.0]
+  s2_normalization: fold_standardize
+  s2_norm_file: NORM_S2_patch.json
+  s2_norm_folds: [1, 2, 3]
+  sample_rng_mode: worker
+  s1_clip: [-40.0, 20.0]
+  ignore_index: 19
+
+model:
+  architecture: sparxo
+  num_classes: 20
+  dim: 160
+  state_dim: 64
+  temporal_heads: 8
+  temporal_layers: 2
+  decoder_depth: 6
+  unet_base_channels: 64
+  boundary_shape_depth: 2
+  dropout: 0.10
+  complex_state: true
+  physical_time: true
+  trapezoidal: true
+  adaptive_pool: true
+  temporal_mask_probability: 0.10
+
+loss:
+  ce_weight: 1.0
+  dice_weight: 0.20
+  lovasz_weight: 0.30
+  boundary_weight: 0.10
+  boundary_consistency_weight: 0.03
+  affinity_weight: 0.05
+  deep_supervision_weight: 0.0
+  auxiliary_weight: 0.0
+  region_weight: 0.0
+  region_compactness_weight: 0.0
+  distillation_weight: 0.0
+  inheritance_weight: 0.0
+  temporal_reconstruction_weight: 0.0
+  label_smoothing: 0.01
+  class_weights: null
+
+train:
+  max_parameters: 12000000
+  epochs: 200
+  batch_size: 6
+  eval_batch_size: 2
+  accumulate_steps: 2
+  target_global_batch: 48
+  learning_rate: 0.0003
+  backbone_lr_multiplier: 1.0
+  freeze_legacy: false
+  require_init: false
+  select_initial_validation: false
+  min_learning_rate: 0.000003
+  weight_decay: 0.05
+  warmup_epochs: 5
+  grad_clip: 1.0
+  amp: true
+  compile: false
+  validate_every: 2
+  validate_every_switch_epoch: 50
+  validate_every_late: 1
+  early_stopping_patience: 20
+  early_stopping_min_epoch: 100
+  ema_start_epoch: 15
+  ema_decay: 0.999
+  ema_update_every: 2
+  test_time_augmentation: false
+  pipeline_contract:
+    s2_normalization: fold_standardize
+    sample_rng_mode: worker
+    require_fixed_global_batch: true
+    require_unweighted_ce: true
+    sampling_train_ids_sha256: e4aca6a00f1cf3426bfd551f13f4f2d3ef04744aaa684fde7d140d4d8259afce
+
+output:
+  dir: outputs/sparxo_v2_u4_pastis_fold5_seed42
+  save_last: true
+  save_top_k: 3
+  save_visualizations: 8

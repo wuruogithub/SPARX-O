@@ -1,0 +1,11 @@
+model:
+  input_channels: 10
+  num_classes: 20
+  dim: 160
+  state_dim: 64
+  temporal_heads: 8
+  temporal_layers: 2
+  unet_base_channels: 64
+  boundary_shape_depth: 2
+  dropout: 0.10
+  temporal_mask_probability: 0.10
