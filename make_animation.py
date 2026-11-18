@@ -38,96 +38,94 @@ def save(frames, durations, name):
                    duration=durations, loop=0, disposal=2, optimize=True)
 
 
-def temporal_selection():
-    """Trace one example group at a single pixel through masked attention."""
-    titles = ["Score each acquisition", "Normalize over valid dates",
-              "Sum the weighted features", "Join the eight pooled groups"]
-    rows = [
-        ("Group 1 score", ["0", "ln 2", "masked", "ln 7"]),
-        ("exp(score)", ["1", "2", "0", "7"]),
-        ("Date weight", ["0.10", "0.20", "0.00", "0.70"]),
-        ("Feature value", ["2", "4", "—", "6"]),
-        ("Contribution", ["0.20", "0.80", "0.00", "4.20"]),
-    ]
-    for step, title in enumerate(titles):
-        im, d = canvas("GROUPED TIME SELECTION   /   ONE PIXEL   /   ILLUSTRATIVE VALUES", title)
-        if step < 3:
-            for j, day in enumerate([10, 40, 60, 130]):
-                label(d, (300+170*j, 116), f"Day {day}", 22, MUTED)
-            selected = [[0], [0, 1, 2], [2, 3, 4]][step]
-            for i, idx in enumerate(selected):
-                name, values = rows[idx]
-                y = 165 + i*47
-                label(d, (40, y), name, 24, ORCHID)
-                for j, value in enumerate(values):
-                    label(d, (300+170*j, y), value, 25, MUTED if j==2 else INK, True)
-            notes = [
-                ("160 features → learned linear projection → 8 group scores per date",
-                 "Each group scores the full pixel feature. Group 1 is shown above."),
-                ("Group 1 denominator = 1 + 2 + 7 = 10",
-                 "Divide each exponential by 10. Day 60 receives zero weight."),
-                ("One pooled channel = 0.20 + 0.80 + 4.20 = 5.20",
-                 "The same date weights apply to all 20 channels in this group."),
-            ]
-            label(d, (39, 328), notes[step][0], 25, COPPER, True)
-            label(d, (39, 382), notes[step][1], 22, MUTED)
-        else:
-            for k in range(8):
-                x = 41 + k*119
-                d.rounded_rectangle((x,157,x+105,225), radius=6, fill="#393748", outline=ORCHID)
-                label(d,(x+17,174),f"G{k+1} · 20",20,INK,True)
-            label(d,(40,267),"8 groups × 20 channels → one 160-channel pixel feature",28,COPPER,True)
-            label(d,(40,342),"Each group learns its own weights across the same acquisition dates.",23,MUTED)
-        yield im
-
-
 def shapes():
-    steps = [
-        ("Acquisitions", "1 × 4 × 10 × 32 × 32", "Ten spectral bands per date", 4, 2),
-        ("Frame embedding + date encoding", "1 × 4 × 160 × 32 × 32", "Each acquisition gains 160 local features.", 4, 6),
-        ("TI-SSM updates each pixel sequence", "1 × 4 × 160 × 32 × 32", "Two updates preserve the four date slots.", 4, 6),
-        ("Grouped temporal selection", "1 × 160 × 32 × 32", "Eight groups pool valid dates into one map.", 1, 6),
-        ("Time-guided spatial prediction", "1 × 20 × 32 × 32", "The decoder produces one score per class.", 1, 3),
-        ("Pixelwise class selection", "1 × 32 × 32", "Argmax gives one class ID per pixel.", 1, 1),
+    stages = [
+        ("Sentinel-2 observations", "1 × 4 × 10 × 32 × 32"),
+        ("Embed each observation and its date", "1 × 4 × 160 × 32 × 32"),
+        ("TI-SSM updates the valid dates", "1 × 4 × 160 × 32 × 32"),
+        ("Score all eight groups at each date", "One pixel  ·  Linear(160 → 8)"),
+        ("Normalize the scores for group 1", "One pixel  ·  softmax over valid dates"),
+        ("Weight one feature channel", "One channel of the 20 in group 1"),
+        ("Sum contributions across dates", "One pooled channel in group 1"),
+        ("Concatenate the pooled groups", "8 groups × 20 channels → 160"),
+        ("Time-guided spatial prediction", "1 × 20 × 32 × 32"),
+        ("Choose the highest-scoring class", "1 × 32 × 32"),
     ]
     frames, durations = [], []
-    for i, (title, shape, note, dates, depth) in enumerate(steps):
-        if i == 3:
-            for panel in temporal_selection():
-                frames.append(panel)
-                durations.append(3500)
-        # Bring all date stacks to the same location before revealing the pooled map.
-        transitions = 17 if i == 3 else 1
-        for frame in range(transitions):
-            t = frame / (transitions - 1) if transitions > 1 else 1
-            pooling = i == 3 and frame < transitions - 1
-            im, d = canvas("SPARX   /   TENSOR SHAPES", title)
-            for j in range(4 if pooling else dates):
-                x = 55 + j * 107 if dates > 1 or pooling else 210
-                if pooling:
-                    x = round(x + (210 - x) * t)
-                color = SLATE_BLUE if dates > 1 or pooling else COPPER
-                for k in range(depth):
-                    y = 160 - k * 5
-                    xx = x + k * 3
-                    d.rectangle((xx, y, xx+68, y+72), fill="#393748", outline=color, width=2)
-                for n in (1, 2, 3):
-                    d.line((xx+n*17,y,xx+n*17,y+72),fill="#84798E")
-                    d.line((xx,y+n*18,xx+68,y+n*18),fill="#84798E")
-                if not pooling or frame == 0:
-                    label(d, (x, 245), f"date {j+1}" if dates > 1 or pooling else "one map", 18, MUTED)
-            label(d, (515, 143), "TENSOR SHAPE", 18, ORCHID, True)
-            label(d, (512, 182), steps[2][1] if pooling else shape, 32, INK, True)
-            axes = "Batch · dates · channels · height · width" if dates > 1 or pooling else (
-                "Batch · channels · height · width" if i < 5 else "Batch · height · width")
-            label(d, (515, 244), axes, 20, MUTED)
-            label(d, (38, 320), note, 25)
-            for j in range(len(steps)):
-                x = 38 + j*160
-                d.rounded_rectangle((x,397,x+147,405),radius=4,fill=ORCHID if j<=i else LINE)
+    starts = [144, 390, 636, 882]
+    days = [10, 40, 60, 130]
+
+    def card(d, x, y, value, color, half=101):
+        x, y = round(x), round(y)
+        d.rounded_rectangle((x-half,y-22,x+half,y+22),radius=8,
+                            fill="#393342",outline=color,width=2)
+        d.text((x,y),value,font=font(21,True),fill=color,anchor="mm")
+
+    def tile(d, x, y, depth, color):
+        for k in range(depth):
+            left, top = round(x-37+k*3), round(y-k*3)
+            d.rectangle((left,top,left+74,top+55),fill="#393748",outline=color,width=2)
+        for n in range(1,4):
+            d.line((left+n*18,top,left+n*18,top+55),fill=LINE)
+            d.line((left,top+n*14,left+74,top+n*14),fill=LINE)
+
+    for stage,(title,shape) in enumerate(stages):
+        for tick in range(19):
+            t=tick/18
+            im,d=canvas("SPARX   /   TENSOR FLOW",title)
+            label(d,(38,116),shape,24,COPPER,True)
+            if stage<=6:
+                for j,x in enumerate(starts):
+                    color=MUTED if j==2 else SLATE_BLUE
+                    label(d,(x-60,164),f"Day {days[j]}" + (" · masked" if j==2 else ""),18,color)
+                    depth=2 if stage==0 else 6
+                    if stage==1:
+                        depth=2+round(4*t)
+                    offset=(1-t)*45 if stage==0 else 0
+                    tile(d,x,214+offset,depth,color)
+                    if stage==2 and j!=2:
+                        # The valid-date scan bypasses the masked slot.
+                        end=starts[0]+(starts[-1]-starts[0])*t
+                        d.line((starts[0],286,end,286),fill=ORCHID,width=3)
+                        if end>=x:
+                            d.ellipse((x-5,281,x+5,291),fill=ORCHID)
+                    if stage in (3,4,5):
+                        progress=max(0,min(1,1.6*t-j*.15))
+                        if progress>0:
+                            y=263+65*progress
+                            d.line((x,272,x,y),fill=color,width=2)
+                            values={
+                                3:["score₁ = 0","score₁ = ln 2","masked","score₁ = ln 7"],
+                                4:["1 / 10 = 0.10","2 / 10 = 0.20","weight = 0","7 / 10 = 0.70"],
+                                5:["0.10 × 2 = 0.20","0.20 × 4 = 0.80","0.00","0.70 × 6 = 4.20"],
+                            }
+                            card(d,x,y,values[stage][j],color)
+                    if stage==6:
+                        end_x=x+(512-x)*t
+                        end_y=285+52*t
+                        d.line((x,272,end_x,end_y),fill=color,width=2)
+                        if t<0.86:
+                            card(d,end_x,end_y,["0.20","0.80","0.00","4.20"][j],color,41)
+                if stage==3:
+                    label(d,(40,382),"Illustrative scores for group 1 of 8",20,MUTED)
+                if stage==4:
+                    label(d,(40,382),"Sum of exponentiated valid scores = 1 + 2 + 7 = 10",20,MUTED)
+                if stage==6 and t>=0.86:
+                    card(d,512,338,"0.20 + 0.80 + 4.20 = 5.20",COPPER,175)
+            elif stage==7:
+                for j in range(8):
+                    x=72+j*126
+                    dest=274+j*68
+                    y=220+65*t
+                    card(d,x+(dest-x)*t,y,f"G{j+1}",ORCHID,30)
+                label(d,(40,365),"Each group pools its own 20 channels.",22,MUTED)
+            else:
+                tile(d,230+(170*t),230,6-round((3 if stage==8 else 2)*t) if stage==8 else 3-round(2*t),COPPER)
+                card(d,740,250,"20 class scores" if stage==8 else "1 class ID / pixel",ORCHID)
+                d.line((453,250,453+175*t,250),fill=ORCHID,width=3)
             frames.append(im)
-            durations.append(75 if pooling else 1900)
-    save(frames, durations, "sparx-tensor-dimensions.gif")
+            durations.append(1300 if tick==18 else 65)
+    save(frames,durations,"sparx-tensor-dimensions.gif")
 
 
 def arrow(d, start, end, color):

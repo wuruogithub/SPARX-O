@@ -4,7 +4,7 @@ SPARX predicts a crop class for each pixel from a sequence of Sentinel-2 images.
 
 ## From an image sequence to a crop map
 
-![Six stages showing how the date and channel dimensions change from four ten-band images to one pixelwise prediction.](assets/sparx-tensor-dimensions.gif)
+![Animated tensor flow from four acquisitions to a crop map, including per-date scores, masked softmax and weighted feature summation.](assets/sparx-tensor-dimensions.gif)
 
 The animation follows a single 32 × 32 patch through the default 20-class model. All four date slots survive embedding and both TI-SSM layers. **The date dimension disappears at grouped temporal selection.** At each pixel and date, a learned linear projection maps all 160 features to eight scores. Each group applies a softmax across valid dates and sums its 20-channel date features using those weights. In the illustrated group, days 10, 40 and 130 receive weights of 0.10, 0.20 and 0.70. Day 60 is masked. Their pooled features form a 160-channel map. The U-Net uses this map for spatial prediction, and the refinement head reuses it to estimate boundaries and affinities between neighboring pixels.
 
