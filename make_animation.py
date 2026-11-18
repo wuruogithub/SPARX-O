@@ -38,6 +38,49 @@ def save(frames, durations, name):
                    duration=durations, loop=0, disposal=2, optimize=True)
 
 
+def temporal_selection():
+    """Trace one example group at a single pixel through masked attention."""
+    titles = ["Score each acquisition", "Normalize over valid dates",
+              "Sum the weighted features", "Join the eight pooled groups"]
+    rows = [
+        ("Group 1 score", ["0", "ln 2", "masked", "ln 7"]),
+        ("exp(score)", ["1", "2", "0", "7"]),
+        ("Date weight", ["0.10", "0.20", "0.00", "0.70"]),
+        ("Feature value", ["2", "4", "—", "6"]),
+        ("Contribution", ["0.20", "0.80", "0.00", "4.20"]),
+    ]
+    for step, title in enumerate(titles):
+        im, d = canvas("GROUPED TIME SELECTION   /   ONE PIXEL   /   ILLUSTRATIVE VALUES", title)
+        if step < 3:
+            for j, day in enumerate([10, 40, 60, 130]):
+                label(d, (300+170*j, 116), f"Day {day}", 22, MUTED)
+            selected = [[0], [0, 1, 2], [2, 3, 4]][step]
+            for i, idx in enumerate(selected):
+                name, values = rows[idx]
+                y = 165 + i*47
+                label(d, (40, y), name, 24, ORCHID)
+                for j, value in enumerate(values):
+                    label(d, (300+170*j, y), value, 25, MUTED if j==2 else INK, True)
+            notes = [
+                ("160 features → learned linear projection → 8 group scores per date",
+                 "Each group scores the full pixel feature. Group 1 is shown above."),
+                ("Group 1 denominator = 1 + 2 + 7 = 10",
+                 "Divide each exponential by 10. Day 60 receives zero weight."),
+                ("One pooled channel = 0.20 + 0.80 + 4.20 = 5.20",
+                 "The same date weights apply to all 20 channels in this group."),
+            ]
+            label(d, (39, 328), notes[step][0], 25, COPPER, True)
+            label(d, (39, 382), notes[step][1], 22, MUTED)
+        else:
+            for k in range(8):
+                x = 41 + k*119
+                d.rounded_rectangle((x,157,x+105,225), radius=6, fill="#393748", outline=ORCHID)
+                label(d,(x+17,174),f"G{k+1} · 20",20,INK,True)
+            label(d,(40,267),"8 groups × 20 channels → one 160-channel pixel feature",28,COPPER,True)
+            label(d,(40,342),"Each group learns its own weights across the same acquisition dates.",23,MUTED)
+        yield im
+
+
 def shapes():
     steps = [
         ("Acquisitions", "1 × 4 × 10 × 32 × 32", "Ten spectral bands per date", 4, 2),
@@ -49,6 +92,10 @@ def shapes():
     ]
     frames, durations = [], []
     for i, (title, shape, note, dates, depth) in enumerate(steps):
+        if i == 3:
+            for panel in temporal_selection():
+                frames.append(panel)
+                durations.append(3500)
         # Bring all date stacks to the same location before revealing the pooled map.
         transitions = 17 if i == 3 else 1
         for frame in range(transitions):
