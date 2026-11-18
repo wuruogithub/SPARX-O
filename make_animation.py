@@ -46,8 +46,8 @@ def shapes():
         ("Score the dates for each group", "One pixel  ·  learned projection from 160 features to 8 scores"),
         ("Pool dates within each group", "Weighted sum across valid dates  →  20 channels per group"),
         ("Concatenate along the channel axis", "8 pooled groups × 20 channels  →  160 channels"),
-        ("Time-guided spatial prediction", "1 × 20 × 32 × 32"),
-        ("Choose the highest-scoring class", "1 × 32 × 32"),
+        ("From spatial features to a crop map", "160 channels  →  20 class scores  →  1 class ID per pixel"),
+
     ]
     frames, durations = [], []
     starts = [144, 390, 636, 882]
@@ -98,15 +98,20 @@ def shapes():
                                anchor="mm",font=font(18),fill=MUTED if j==2 else SLATE_BLUE)
                 for g in range(8):
                     y=top+pitch*g
-                    d.text((72,y),f"G{g+1}",anchor="mm",font=font(18,True),fill=ORCHID)
+                    group_color = ORCHID if g%2==0 else SLATE_BLUE
+                    if stage==3:
+                        d.text((72,y),f"G{g+1}",anchor="mm",font=font(18,True),fill=ORCHID)
                     if stage==5:
-                        # Stack the eight vectors in this order into one channel vector.
-                        yy=y+(246+g*14-y)*t
-                        x=pooled_x+(512-pooled_x)*t
-                        d.rounded_rectangle((x-75,yy-6,x+75,yy+6),radius=3,
-                                            fill=ORCHID if g%2==0 else SLATE_BLUE)
-                        if g==7:
-                            label(d,(max(620,x-300),385),"160 channels" if t==1 else "8 groups of 20",19,COPPER)
+                        ease=t*t*(3-2*t)
+                        x=round(pooled_x+(148+104*g-pooled_x)*ease)
+                        yy=round(y+(273-y)*ease)
+                        half=round(28+24*ease)
+                        d.rounded_rectangle((x-half,yy-10,x+half,yy+10),
+                                            radius=round(4*(1-ease)),fill=group_color)
+                        d.text((x,yy),"20",anchor="mm",font=font(15,True),fill=PAPER)
+                        if t==1 and g==7:
+                            d.line((96,300,928,300),fill=COPPER,width=2)
+                            d.text((512,325),"160 channels",anchor="mm",font=font(20,True),fill=COPPER)
                         continue
                     for j,x in enumerate(cols):
                         col=MUTED if j==2 else SLATE_BLUE
@@ -125,16 +130,30 @@ def shapes():
                             d.ellipse((xx-6,y-6,xx+6,y+6),fill=col)
                     if stage==4 and t>0.85:
                         d.rounded_rectangle((pooled_x-28,y-10,pooled_x+28,y+10),
-                                            radius=4,fill=COPPER)
+                                            radius=4,fill=group_color)
                         d.text((pooled_x,y),"20",anchor="mm",font=font(15,True),fill=PAPER)
                 if stage==3:
                     label(d,(39,402),"One score per valid date and group. G1 shows illustrative values.",19,MUTED)
                 if stage==4:
-                    label(d,(39,402),"G1 example: 0.10 × 2 + 0.20 × 4 + 0.70 × 6 = 5.20",19,MUTED)
+                    label(d,(39,402),"One channel: 0.10 × 2 + 0.20 × 4 + 0.70 × 6 = 5.20",19,MUTED)
             else:
-                tile(d,230+(170*t),230,6-round((3 if stage==6 else 2)*t) if stage==6 else 3-round(2*t),COPPER)
-                card(d,740,250,"20 class scores" if stage==6 else "1 class ID / pixel",ORCHID)
-                d.line((453,250,453+175*t,250),fill=ORCHID,width=3)
+                tile(d,160,240,6,SLATE_BLUE)
+                label(d,(84,326),"Spatial features",20,MUTED)
+                arrow(d,(235,263),(235+190*min(1,t*2),263),SLATE_BLUE)
+                if t>=0.35:
+                    tile(d,503,240,1+round(4*min(1,(t-0.35)*6)),COPPER)
+                    label(d,(443,326),"Class scores",20,MUTED)
+                if t>=0.5:
+                    arrow(d,(584,263),(584+150*(2*t-1),263),COPPER)
+                    d.text((657,226),"argmax",anchor="mm",font=font(19),fill=COPPER)
+                    # Reveal the predicted label map, one column at a time.
+                    parcels=(ORCHID,SLATE_BLUE,COPPER)
+                    for col in range(round(8*(2*t-1))):
+                        for row in range(8):
+                            x,y=770+col*14,207+row*14
+                            zone=0 if col+row<6 else (1 if col<5 else 2)
+                            d.rectangle((x,y,x+13,y+13),fill=parcels[zone])
+                    label(d,(752,326),"Pixel classes",20,MUTED)
             frames.append(im)
             durations.append(1300 if tick==18 else 65)
     save(frames,durations,"sparx-tensor-dimensions.gif")
