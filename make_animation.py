@@ -174,8 +174,8 @@ def states():
     dates = [10, 40, 50, 110, 130]
     inputs = [1.6, 1.0, 2.0, 1.3, 2.4]
     history = [0j, 0j, 0j]
-    names = ["Fixed-step SSM", "Elapsed-time decay", "TI-SSM"]
-    captions = ["Fixed decay + current input", "Gap decay + current input",
+    names = ["Fixed-step SSM", "Decay + rotation", "TI-SSM"]
+    captions = ["Fixed decay + current input", "Gap-driven history + current input",
                 "Gap decay, rotation + both inputs"]
     frames, durations = [], []
     for k in range(1, len(dates)):
@@ -183,10 +183,11 @@ def states():
         dt = gap / 365.2425
         fixed = 30 / 365.2425
         rate = 2.5
-        # The two scalar controls share the fixed-step ZOH input gain.
-        # Only the memory coefficient changes in the middle column.
+        # The first two panels share the fixed-step ZOH input gain.
+        # The middle and right panels share the complex history transition.
         fixed_gain = -math.expm1(-rate*fixed)/rate
-        coeff = [math.exp(-rate*fixed), math.exp(-rate*dt),
+        transition = cmath.exp(complex(-rate,2*math.pi)*dt)
+        coeff = [math.exp(-rate*fixed), transition,
                  cmath.exp(complex(-rate,2*math.pi)*dt)]
         inc = [fixed_gain*inputs[k], fixed_gain*inputs[k],
                dt*(coeff[2]*inputs[k-1]+inputs[k])/2]
@@ -209,13 +210,20 @@ def states():
                 new=moved+add*inc[j]
                 d.line((x+24,299,x+288,299),fill=LINE,width=2)
                 d.line((origin[0],190,origin[0],326),fill=LINE,width=2)
+                label(d,(x+4,191),"Im (imag.)",15,MUTED)
+                label(d,(x+218,303),"Re (real)",15,MUTED)
+                d.polygon([(x+288,299),(x+281,295),(x+281,303)],fill=LINE)
+                d.polygon([(origin[0],190),(origin[0]-4,197),(origin[0]+4,197)],fill=LINE)
+                if j and carry>0 and abs(history[j])>0:
+                    trail=[pos(history[j]*coeff[j]**(carry*n/24)) for n in range(25)]
+                    d.line(trail,fill=SLATE_BLUE,width=2)
                 # A hollow marker preserves the starting point when vectors overlap.
                 hx,hy=pos(history[j])
                 arrow(d,origin,pos(moved),COPPER)
                 if add>0:
                     arrow(d,pos(moved),pos(new),ORCHID)
                 d.ellipse((hx-5,hy-5,hx+5,hy+5),outline=SLATE_BLUE,width=2)
-                label(d,(x,345),f"History retained   {abs(coeff[j]):.0%}",18,MUTED)
+                label(d,(x,345),f"Retention {abs(coeff[j]):.0%}    Rotation {math.degrees(cmath.phase(coeff[j])):.0f}°",18,MUTED)
             label(d,(34,398),"○ Previous state",18,SLATE_BLUE)
             label(d,(337,398),"→ Propagated history",18,COPPER)
             label(d,(683,398),"→ Input contribution",18,ORCHID)

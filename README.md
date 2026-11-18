@@ -10,11 +10,11 @@ The animation follows a single 32 × 32 patch through the default 20-class model
 
 ## ⏱️ How TI-SSM advances between observations
 
-![Four updates on the same five dates, comparing a fixed-step SSM, elapsed-time decay alone and TI-SSM.](assets/ti-ssm-update.gif)
+![Four updates on the same five dates, comparing a fixed-step SSM, interval-dependent decay and rotation and TI-SSM.](assets/ti-ssm-update.gif)
 
-Follow one pixel from day 10 through days 40, 50, 110 and 130. All three columns start at zero and receive the same inputs. The left column illustrates a scalar fixed-step SSM with a nominal 30-day step. The middle column changes only the history decay to use the observed gap. The right column uses the TI-SSM update with interval-dependent decay, rotation and integration of the previous and current inputs. A unit content adjustment is used for illustration.
+Follow one pixel from day 10 through days 40, 50, 110 and 130. All three columns start at zero and receive the same inputs. The left column illustrates a scalar fixed-step SSM with a nominal 30-day step. The middle column uses the observed gap to shrink and rotate the complex state while retaining the same current-input term as the left column. The right column uses the TI-SSM update with interval-dependent decay, rotation and integration of the previous and current inputs. A unit content adjustment is used for illustration.
 
-The blue ring marks the previous state. Copper shows where that history propagates; pink adds the input contribution. Compare the 10-day and 60-day gaps. The fixed-step control retains 81% of its history in both updates. With elapsed-time decay, retention changes from 93% to 66%. TI-SSM also changes the rotation and the input increment. Each column carries its resulting state into the next update.
+The blue ring marks the previous state. Copper shows where that history propagates; pink adds the input contribution. Compare the 10-day and 60-day gaps. The fixed-step control retains 81% of its history in both updates. In the middle and right panels, retention changes from 93% to 66% and rotation from 10° to 59°. The right panel also integrates the two endpoint inputs over the elapsed interval. All panels use the horizontal axis for the real component and the vertical axis for the imaginary component. The scalar baseline stays on the real axis. Each column carries its resulting state into the next update.
 
 ## 📊 Semantic segmentation results
 
