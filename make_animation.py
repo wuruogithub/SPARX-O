@@ -199,11 +199,11 @@ def states():
             im,d=canvas(f"TI-SSM   /   UPDATE {k} OF 4",
                         f"Day {dates[k-1]} → {dates[k]}     ·     {gap}-day gap")
             # The common timeline stays visible throughout all four updates.
-            board=Image.new("RGB",(1024,532),PAPER)
+            board=Image.new("RGB",(1024,772),PAPER)
             board.paste(im,(0,0))
             im=board
             d=ImageDraw.Draw(im)
-            timeline_x=[80+(day-dates[0])*7 for day in dates]
+            timeline_x=[45+(day-dates[0])*934/120 for day in dates]
             for idx in range(4):
                 x0,x1=timeline_x[idx:idx+2]
                 d.line((x0,465,x1,465),fill=LINE,width=3)
@@ -218,19 +218,19 @@ def states():
             for j,name in enumerate(names):
                 x=33+331*j
                 if j:
-                    d.line((x-14,122,x-14,384),fill=LINE)
+                    d.line((x-14,122,x-14,757),fill=LINE)
                 label(d,(x,121),name,24,INK,True)
                 label(d,(x,162),captions[j],16,MUTED)
-                origin=(x+64,299)
+                origin=(x+35,337)
                 def pos(z):
-                    return (origin[0]+280*z.real,origin[1]-280*z.imag)
+                    return (origin[0]+655*z.real,origin[1]-655*z.imag)
                 moved=history[j]*coeff[j]**carry
                 new=moved+add*inc[j]
-                d.line((x+24,299,x+288,299),fill=LINE,width=2)
-                d.line((origin[0],190,origin[0],326),fill=LINE,width=2)
-                label(d,(x+4,191),"Im (imag.)",15,MUTED)
-                label(d,(x+218,303),"Re (real)",15,MUTED)
-                d.polygon([(x+288,299),(x+281,295),(x+281,303)],fill=LINE)
+                d.line((x+3,337,x+305,337),fill=LINE,width=2)
+                d.line((origin[0],190,origin[0],356),fill=LINE,width=2)
+                label(d,(x+42,182),"Im (imag.)",15,MUTED)
+                label(d,(x+240,341),"Re (real)",15,MUTED)
+                d.polygon([(x+305,337),(x+298,333),(x+298,341)],fill=LINE)
                 d.polygon([(origin[0],190),(origin[0]-4,197),(origin[0]+4,197)],fill=LINE)
                 for step,(start,transition,end) in enumerate(completed[j],1):
                     path=[pos(start*transition**(n/24)) for n in range(25)]
@@ -251,7 +251,35 @@ def states():
                     ex,ey=pos(new)
                     d.text((ex,ey+(12 if k%2 else -12)),str(k),anchor="mm",font=font(13,True),fill=INK)
                 d.ellipse((hx-5,hy-5,hx+5,hy+5),outline=SLATE_BLUE,width=2)
-                label(d,(x,345),f"Retention {abs(coeff[j]):.0%}    Rotation {math.degrees(cmath.phase(coeff[j])):.0f}°",18,MUTED)
+                label(d,(x,370),f"Retention {abs(coeff[j]):.0%}    Rotation {math.degrees(cmath.phase(coeff[j])):.0f}°",18,MUTED)
+                # Show measured states only at acquisitions; joins guide the eye.
+                left,right=x+22,x+290
+                bottom=704
+                def trace_point(day,value):
+                    return (left+(right-left)*(day-dates[0])/(dates[-1]-dates[0]),
+                            bottom-310*value)
+                label(d,(x+3,522),"Real state  Re(z)",19,INK,True)
+                for value in (0,0.2,0.4):
+                    yy=trace_point(10,value)[1]
+                    d.line((left,yy,right,yy),fill=LINE)
+                    d.text((left-4,yy),f"{value:.1f}",anchor="rm",font=font(13),fill=MUTED)
+                for day in dates:
+                    xx=trace_point(day,0)[0]
+                    d.text((xx,716),str(day),anchor="mt",font=font(14),fill=MUTED)
+                d.text(((left+right)/2,745),"Acquisition day",anchor="mm",font=font(16),fill=MUTED)
+                points=[trace_point(dates[0],0)]
+                points.extend(trace_point(dates[n],end.real)
+                              for n,(_,_,end) in enumerate(completed[j],1))
+                xx=trace_point(dates[k],0)[0]
+                d.line((xx,568,xx,bottom),fill=LINE)
+                if tick==36:
+                    points.append(trace_point(dates[k],new.real))
+                if len(points)>1:
+                    d.line(points,fill=SLATE_BLUE,width=3)
+                for px,py in points:
+                    d.ellipse((px-4,py-4,px+4,py+4),fill=SLATE_BLUE)
+                live_y=trace_point(dates[k],new.real)[1]
+                d.ellipse((xx-5,live_y-5,xx+5,live_y+5),outline=ORCHID,width=2)
             label(d,(34,398),"○ Previous state",18,SLATE_BLUE)
             label(d,(337,398),"→ Propagated history",18,COPPER)
             label(d,(683,398),"→ Input contribution",18,ORCHID)
