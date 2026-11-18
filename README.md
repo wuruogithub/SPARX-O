@@ -2,13 +2,13 @@
 
 SPARX predicts a crop class for each pixel from a sequence of Sentinel-2 images. Two acquisitions can be adjacent in a sequence while lying weeks or months apart. SPARX gives each image an encoding of its acquisition date and uses the elapsed time between valid images to update a per-pixel state. A grouped temporal readout then builds the feature map that guides spatial segmentation.
 
-## From an image sequence to a crop map
+## 🛰️ From an image sequence to a crop map
 
 ![Animated tensor flow from four acquisitions to a crop map, including per-date scores, masked softmax and weighted feature summation.](assets/sparx-tensor-dimensions.gif)
 
 The animation follows a single 32 × 32 patch through the default 20-class model. All four date slots survive embedding and both TI-SSM layers. **The date dimension disappears at grouped temporal selection.** At each pixel and date, a learned linear projection maps all 160 features to eight scores. Each group applies a softmax across valid dates and sums its 20-channel date features using those weights. In the illustrated group, days 10, 40 and 130 receive weights of 0.10, 0.20 and 0.70. Day 60 is masked. In the animation, dates run across columns and groups run down rows. Each row pools across valid dates. The eight resulting 20-channel blocks move from their rows into a single horizontal strip, in group order, to show the 160-channel feature at one pixel. The U-Net uses this map for spatial prediction, and the refinement head reuses it to estimate boundaries and affinities between neighboring pixels.
 
-## How TI-SSM advances between observations
+## ⏱️ How TI-SSM advances between observations
 
 ![Animated complex-state update for observations on days 10, 40 and 130, with day 60 masked.](assets/ti-ssm-update.gif)
 
@@ -16,7 +16,7 @@ Follow one state channel at one pixel. Day 10 supplies the first input. Day 40 a
 
 The slate-blue vector shows the previous state. As the copper segment grows, the history decays and rotates according to the effective interval. The orchid segment adds the contribution of the previous and current valid inputs. Its endpoint is the new state. The animation uses illustrative inputs, a decay rate of 2.5 per year, one rotation per year and a unit content adjustment. In the model, decay and rotation rates are learned per channel, and the current feature can rescale the elapsed interval. Each layer projects the real part of its 64-channel state back into the 160-channel observation feature.
 
-## Semantic segmentation results
+## 📊 Semantic segmentation results
 
 | Benchmark | Evaluation | mIoU (%) | Boundary F1 (%) |
 | --- | --- | ---: | ---: |
@@ -25,7 +25,7 @@ The slate-blue vector shows the previous state. As the copper segment grows, the
 
 On PASTIS-S2, keeping the frame encoder, grouped readout and spatial decoder while removing cross-date interaction gives 68.43% mIoU. Adding TI-SSM brings the score to 69.78% (+1.35 percentage points). The first result shows what date-specific features and temporal pooling can recover on their own. The difference measures the additional gain from interval-aware interaction in this architecture.
 
-## Run a forward pass
+## ▶️ Run a forward pass
 
 Use Python 3.10 or 3.11 with a PyTorch build compatible with your environment. From the repository root, run:
 
@@ -53,7 +53,7 @@ print(output["logits"].shape)            # [1, 20, 32, 32]
 print(crop_map.shape)                    # [1, 32, 32]
 ```
 
-## Train and evaluate
+## ⚙️ Train and evaluate
 
 For PASTIS-S2, point `data.root` in `configs/pastis.yaml` to the extracted PASTIS-R dataset. The default configuration trains on data folds 1–3, validates on fold 4 and tests on fold 5. This is the first of the five runs reported above. For MTLCC, set the data paths in `configs/mtlcc_scratch.yaml` for the 2016 split. [PASTIS-R data](https://zenodo.org/records/5735646) · [MTLCC data](https://zenodo.org/records/5712933)
 
