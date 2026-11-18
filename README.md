@@ -10,11 +10,11 @@ The animation follows a single 32 × 32 patch through the default 20-class model
 
 ## ⏱️ How TI-SSM advances between observations
 
-![Side-by-side updates of the same complex state across 30-day and 90-day observation gaps.](assets/ti-ssm-update.gif)
+![Four updates on the same five dates, comparing a fixed-step SSM, elapsed-time decay alone and TI-SSM.](assets/ti-ssm-update.gif)
 
-Imagine a pixel last observed on day 40. If its next valid image arrives on day 70, the state advances by 30 days. If it arrives on day 130, the state advances by 90 days. The animation holds the starting state and both endpoint inputs fixed to isolate the effect of that gap.
+Follow one pixel from day 10 through days 40, 50, 110 and 130. All three columns start at zero and receive the same inputs. The left column illustrates a scalar fixed-step SSM with a nominal 30-day step. The middle column changes only the history decay to use the observed gap. The right column uses the TI-SSM update with interval-dependent decay, rotation and integration of the previous and current inputs. A unit content adjustment is used for illustration.
 
-The blue arrow is the stored history. The copper arrow shows how much of it reaches the new date and how far it rotates. With the illustrative rates used here, the short gap retains 81% of the original magnitude and the long gap retains 54%. The pink arrow adds the interval-scaled contribution of the two inputs. The final horizontal coordinate is the real part that the layer projects back into the current observation feature. Masked dates are skipped when measuring the gap.
+The blue ring marks the previous state. Copper shows where that history propagates; pink adds the input contribution. Compare the 10-day and 60-day gaps. The fixed-step control retains 81% of its history in both updates. With elapsed-time decay, retention changes from 93% to 66%. TI-SSM also changes the rotation and the input increment. Each column carries its resulting state into the next update.
 
 ## 📊 Semantic segmentation results
 

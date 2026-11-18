@@ -171,49 +171,57 @@ def arrow(d, start, end, color):
 
 
 def states():
+    dates = [10, 40, 50, 110, 130]
+    inputs = [1.6, 1.0, 2.0, 1.3, 2.4]
+    history = [0j, 0j, 0j]
+    names = ["Fixed-step SSM", "Elapsed-time decay", "TI-SSM"]
+    captions = ["Fixed decay + current input", "Gap decay + current input",
+                "Gap decay, rotation + both inputs"]
     frames, durations = [], []
-    phases = ["Start with the same stored state", "Carry history across the gap",
-              "Add the two endpoint inputs", "Read the updated state"]
-    for stage,title in enumerate(phases):
-        for step in range(19):
-            t=step/18
-            im,d=canvas("TI-SSM   /   ONE PIXEL, ONE STATE CHANNEL",title)
-            for index,gap in enumerate((30,90)):
-                left=36+index*496
-                origin=(left+106,305)
-                tau=gap/365.2425
-                z=complex(.65,0)
-                a=cmath.exp(complex(-2.5,2*math.pi)*tau)
-                moved=z*cmath.exp(complex(-2.5,2*math.pi)*tau*(0 if stage==0 else t if stage==1 else 1))
-                increment=tau*(a*1.2+1.8)/2
-                new=moved+increment*(0 if stage<2 else t if stage==2 else 1)
-                def point(v):
-                    return (origin[0]+140*v.real,origin[1]-140*v.imag)
-                label(d,(left,122),f"{gap}-day gap",27,INK,True)
-                label(d,(left,163),f"Day 40  →  Day {40+gap}",20,MUTED)
-                d.line((left+55,305,left+267,305),fill=LINE,width=2)
-                d.line((origin[0],195,origin[0],320),fill=LINE,width=2)
-                if stage>=3:
-                    px,py=point(new)
-                    d.line((px,py,px,305),fill=COPPER,width=2)
-                arrow(d,origin,point(z),SLATE_BLUE)
-                if stage>=1:
-                    arrow(d,origin,point(moved),COPPER)
-                if stage>=2:
-                    arrow(d,point(moved),point(new),ORCHID)
-                details=["Same history",f"{abs(a):.0%} retained", "Add interval-scaled",f"Real part: {new.real:.2f}"]
-                label(d,(left+250,222),details[stage],20,INK,True)
-                if stage==1:
-                    label(d,(left+250,258),f"{360*tau:.0f}° final rotation",18,MUTED)
-                if stage==2:
-                    label(d,(left+250,258),"input increment",19,ORCHID)
-            notes=["Both cases use identical inputs and model parameters.",
-                   "A longer gap shrinks and rotates the carried history further in this example.",
-                   "The previous and current inputs contribute to the new state (pink arrow).",
-                   "The layer projects the real part back into the current date feature."]
-            label(d,(36,368),notes[stage],22,INK)
+    for k in range(1, len(dates)):
+        gap = dates[k] - dates[k-1]
+        dt = gap / 365.2425
+        fixed = 30 / 365.2425
+        rate = 2.5
+        # The two scalar controls share the fixed-step ZOH input gain.
+        # Only the memory coefficient changes in the middle column.
+        fixed_gain = -math.expm1(-rate*fixed)/rate
+        coeff = [math.exp(-rate*fixed), math.exp(-rate*dt),
+                 cmath.exp(complex(-rate,2*math.pi)*dt)]
+        inc = [fixed_gain*inputs[k], fixed_gain*inputs[k],
+               dt*(coeff[2]*inputs[k-1]+inputs[k])/2]
+        for tick in range(37):
+            t=tick/36
+            carry=min(1,2*t)
+            add=max(0,2*t-1)
+            im,d=canvas(f"TI-SSM   /   UPDATE {k} OF 4",
+                        f"Day {dates[k-1]} → {dates[k]}     ·     {gap}-day gap")
+            for j,name in enumerate(names):
+                x=33+331*j
+                if j:
+                    d.line((x-14,122,x-14,384),fill=LINE)
+                label(d,(x,121),name,24,INK,True)
+                label(d,(x,162),captions[j],16,MUTED)
+                origin=(x+64,299)
+                def pos(z):
+                    return (origin[0]+280*z.real,origin[1]-280*z.imag)
+                moved=history[j]*coeff[j]**carry
+                new=moved+add*inc[j]
+                d.line((x+24,299,x+288,299),fill=LINE,width=2)
+                d.line((origin[0],190,origin[0],326),fill=LINE,width=2)
+                # A hollow marker preserves the starting point when vectors overlap.
+                hx,hy=pos(history[j])
+                arrow(d,origin,pos(moved),COPPER)
+                if add>0:
+                    arrow(d,pos(moved),pos(new),ORCHID)
+                d.ellipse((hx-5,hy-5,hx+5,hy+5),outline=SLATE_BLUE,width=2)
+                label(d,(x,345),f"History retained   {abs(coeff[j]):.0%}",18,MUTED)
+            label(d,(34,398),"○ Previous state",18,SLATE_BLUE)
+            label(d,(337,398),"→ Propagated history",18,COPPER)
+            label(d,(683,398),"→ Input contribution",18,ORCHID)
             frames.append(im)
-            durations.append(2400 if step==18 else 85)
+            durations.append(1800 if tick==36 else 240 if tick==18 else 65)
+        history=[c*z+b for c,z,b in zip(coeff,history,inc)]
     save(frames,durations,"ti-ssm-update.gif")
 
 
