@@ -43,11 +43,9 @@ def shapes():
         ("Sentinel-2 observations", "1 × 4 × 10 × 32 × 32"),
         ("Embed each observation and its date", "1 × 4 × 160 × 32 × 32"),
         ("TI-SSM updates the valid dates", "1 × 4 × 160 × 32 × 32"),
-        ("Score all eight groups at each date", "One pixel  ·  Linear(160 → 8)"),
-        ("Normalize the scores for group 1", "One pixel  ·  softmax over valid dates"),
-        ("Weight one feature channel", "One channel of the 20 in group 1"),
-        ("Sum contributions across dates", "One pooled channel in group 1"),
-        ("Concatenate the pooled groups", "8 groups × 20 channels → 160"),
+        ("Score the dates for each group", "One pixel  ·  learned projection from 160 features to 8 scores"),
+        ("Pool dates within each group", "Weighted sum across valid dates  →  20 channels per group"),
+        ("Concatenate along the channel axis", "8 pooled groups × 20 channels  →  160 channels"),
         ("Time-guided spatial prediction", "1 × 20 × 32 × 32"),
         ("Choose the highest-scoring class", "1 × 32 × 32"),
     ]
@@ -74,7 +72,7 @@ def shapes():
             t=tick/18
             im,d=canvas("SPARX   /   TENSOR FLOW",title)
             label(d,(38,116),shape,24,COPPER,True)
-            if stage<=6:
+            if stage<=2:
                 for j,x in enumerate(starts):
                     color=MUTED if j==2 else SLATE_BLUE
                     label(d,(x-60,164),f"Day {days[j]}" + (" · masked" if j==2 else ""),18,color)
@@ -89,39 +87,53 @@ def shapes():
                         d.line((starts[0],286,end,286),fill=ORCHID,width=3)
                         if end>=x:
                             d.ellipse((x-5,281,x+5,291),fill=ORCHID)
-                    if stage in (3,4,5):
-                        progress=max(0,min(1,1.6*t-j*.15))
-                        if progress>0:
-                            y=263+65*progress
-                            d.line((x,272,x,y),fill=color,width=2)
-                            values={
-                                3:["score₁ = 0","score₁ = ln 2","masked","score₁ = ln 7"],
-                                4:["1 / 10 = 0.10","2 / 10 = 0.20","weight = 0","7 / 10 = 0.70"],
-                                5:["0.10 × 2 = 0.20","0.20 × 4 = 0.80","0.00","0.70 × 6 = 4.20"],
-                            }
-                            card(d,x,y,values[stage][j],color)
-                    if stage==6:
-                        end_x=x+(512-x)*t
-                        end_y=285+52*t
-                        d.line((x,272,end_x,end_y),fill=color,width=2)
-                        if t<0.86:
-                            card(d,end_x,end_y,["0.20","0.80","0.00","4.20"][j],color,41)
+            elif 3 <= stage <= 5:
+                # Dates run left to right; channel groups retain their vertical order.
+                cols = [224, 405, 586, 767]
+                top, pitch = 201, 26
+                pooled_x = 925
+                for j,x in enumerate(cols):
+                    if stage != 5:
+                        d.text((x,171),["Day 10","Day 40","Day 60 · masked","Day 130"][j],
+                               anchor="mm",font=font(18),fill=MUTED if j==2 else SLATE_BLUE)
+                for g in range(8):
+                    y=top+pitch*g
+                    d.text((72,y),f"G{g+1}",anchor="mm",font=font(18,True),fill=ORCHID)
+                    if stage==5:
+                        # Stack the eight vectors in this order into one channel vector.
+                        yy=y+(246+g*14-y)*t
+                        x=pooled_x+(512-pooled_x)*t
+                        d.rounded_rectangle((x-75,yy-6,x+75,yy+6),radius=3,
+                                            fill=ORCHID if g%2==0 else SLATE_BLUE)
+                        if g==7:
+                            label(d,(max(620,x-300),385),"160 channels" if t==1 else "8 groups of 20",19,COPPER)
+                        continue
+                    for j,x in enumerate(cols):
+                        col=MUTED if j==2 else SLATE_BLUE
+                        if stage==3:
+                            if t<0.42:
+                                width=round(63*t/0.42)
+                                d.line((x-width,y,x+width,y),fill=col,width=2)
+                            else:
+                                d.rounded_rectangle((x-66,y-11,x+66,y+11),radius=5,fill="#393342",outline=col)
+                                scores=["0","ln 2","masked","ln 7"] if g==0 else [
+                                    f"s({g+1},1)",f"s({g+1},2)","masked",f"s({g+1},4)"]
+                                d.text((x,y),scores[j],anchor="mm",font=font(16),fill=col)
+                        elif j!=2:
+                            xx=x+(pooled_x-x)*t
+                            d.line((x,y,xx,y),fill=LINE,width=1)
+                            d.ellipse((xx-6,y-6,xx+6,y+6),fill=col)
+                    if stage==4 and t>0.85:
+                        d.rounded_rectangle((pooled_x-28,y-10,pooled_x+28,y+10),
+                                            radius=4,fill=COPPER)
+                        d.text((pooled_x,y),"20",anchor="mm",font=font(15,True),fill=PAPER)
                 if stage==3:
-                    label(d,(40,382),"Illustrative scores for group 1 of 8",20,MUTED)
+                    label(d,(39,402),"One score per valid date and group. G1 shows illustrative values.",19,MUTED)
                 if stage==4:
-                    label(d,(40,382),"Sum of exponentiated valid scores = 1 + 2 + 7 = 10",20,MUTED)
-                if stage==6 and t>=0.86:
-                    card(d,512,338,"0.20 + 0.80 + 4.20 = 5.20",COPPER,175)
-            elif stage==7:
-                for j in range(8):
-                    x=72+j*126
-                    dest=274+j*68
-                    y=220+65*t
-                    card(d,x+(dest-x)*t,y,f"G{j+1}",ORCHID,30)
-                label(d,(40,365),"Each group pools its own 20 channels.",22,MUTED)
+                    label(d,(39,402),"G1 example: 0.10 × 2 + 0.20 × 4 + 0.70 × 6 = 5.20",19,MUTED)
             else:
-                tile(d,230+(170*t),230,6-round((3 if stage==8 else 2)*t) if stage==8 else 3-round(2*t),COPPER)
-                card(d,740,250,"20 class scores" if stage==8 else "1 class ID / pixel",ORCHID)
+                tile(d,230+(170*t),230,6-round((3 if stage==6 else 2)*t) if stage==6 else 3-round(2*t),COPPER)
+                card(d,740,250,"20 class scores" if stage==6 else "1 class ID / pixel",ORCHID)
                 d.line((453,250,453+175*t,250),fill=ORCHID,width=3)
             frames.append(im)
             durations.append(1300 if tick==18 else 65)
