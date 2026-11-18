@@ -10,11 +10,13 @@ The animation follows a single 32 × 32 patch through the default 20-class model
 
 ## ⏱️ How TI-SSM advances between observations
 
-![Four updates on the same five dates, comparing a fixed-step SSM, interval-dependent decay and rotation and TI-SSM.](assets/ti-ssm-update.gif)
+![Four updates with a no-decay SSM, propagation alone and TI-SSM. The lower panels plot state magnitude over acquisition time.](assets/ti-ssm-update.gif)
 
-Follow one pixel from day 10 through days 40, 50, 110 and 130. All three columns start at zero and receive the same inputs. The left column illustrates a scalar fixed-step SSM with a nominal 30-day step. The middle column uses the observed gap to shrink and rotate the complex state while retaining the same current-input term as the left column. The right column uses the TI-SSM update with interval-dependent decay, rotation and integration of the previous and current inputs. A unit content adjustment is used for illustration.
+All three examples start with a stored state of magnitude 0.22 on day 10. The upper row follows one channel in the complex plane; the lower row plots its magnitude against acquisition day. Copper traces history propagation and pink shows the contribution added at an observation.
 
-The blue ring marks the previous state. The copper arrow starts at the previous endpoint and ends at the propagated state; pink adds the input contribution. Compare the 10-day and 60-day gaps. The fixed-step control retains 81% of its history in both updates. In the middle and right panels, retention changes from 93% to 66% and rotation from 10° to 59°. The right panel also integrates the two endpoint inputs over the elapsed interval. The upper panels use the horizontal axis for the real component and the vertical axis for the imaginary component. The scalar baseline stays on the real axis. The lower row plots acquisition day against the real component used by the readout, on shared scales. The ring follows the current update; filled points mark completed states. Lines connect observations as a visual guide.
+- **No-decay SSM.** The history coefficient is exactly 1. Magnitude stays flat throughout every gap and changes only when an input arrives.
+- **Propagation alone.** The stored state decays and rotates without receiving new input. Its magnitude traces one continuous exponential decay across all four intervals.
+- **TI-SSM.** Each interval starts at the preceding updated state. Its magnitude decays until the next observation; the interval-weighted endpoint inputs then update the state at that date. Rotation is visible in the upper row.
 
 ## 📊 Semantic segmentation results
 

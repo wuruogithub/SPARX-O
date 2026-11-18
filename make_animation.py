@@ -173,25 +173,18 @@ def arrow(d, start, end, color):
 def states():
     dates = [10, 40, 50, 110, 130]
     inputs = [1.6, 1.0, 2.0, 1.3, 2.4]
-    history = [0j, 0j, 0j]
+    history = [0.22+0j] * 3
     completed = [[], [], []]
-    names = ["Fixed-step SSM", "Decay + rotation", "TI-SSM"]
-    captions = ["Fixed decay + current input", "Gap-driven history + current input",
+    names = ["No-decay SSM", "Decay + rotation", "TI-SSM"]
+    captions = ["A = 1: hold, then add input", "History alone: no new input",
                 "Gap decay, rotation + both inputs"]
     frames, durations = [], []
     for k in range(1, len(dates)):
         gap = dates[k] - dates[k-1]
         dt = gap / 365.2425
-        fixed = 30 / 365.2425
-        rate = 2.5
-        # The first two panels share the fixed-step ZOH input gain.
-        # The middle and right panels share the complex history transition.
-        fixed_gain = -math.expm1(-rate*fixed)/rate
-        transition = cmath.exp(complex(-rate,2*math.pi)*dt)
-        coeff = [math.exp(-rate*fixed), transition,
-                 cmath.exp(complex(-rate,2*math.pi)*dt)]
-        inc = [fixed_gain*inputs[k], fixed_gain*inputs[k],
-               dt*(coeff[2]*inputs[k-1]+inputs[k])/2]
+        transition = cmath.exp(complex(-2.5,2*math.pi)*dt)
+        coeff = [1.0, transition, transition]
+        inc = [0.05*inputs[k], 0j, dt*(transition*inputs[k-1]+inputs[k])/2]
         for tick in range(37):
             t=tick/36
             carry=min(1,2*t)
@@ -207,12 +200,12 @@ def states():
             for idx in range(4):
                 x0,x1=timeline_x[idx:idx+2]
                 d.line((x0,465,x1,465),fill=LINE,width=3)
-                progress=1 if idx<k-1 else t if idx==k-1 else 0
+                progress=1 if idx<k-1 else carry if idx==k-1 else 0
                 if progress:
                     d.line((x0,465,x0+(x1-x0)*progress,465),fill=COPPER,width=4)
                 d.text(((x0+x1)/2,450),f"{dates[idx+1]-dates[idx]} d",anchor="ms",font=font(15),fill=MUTED)
             for idx,(day,xx) in enumerate(zip(dates,timeline_x)):
-                color=COPPER if idx<k or idx==k and tick==36 else MUTED
+                color=COPPER if idx<k or idx==k and carry==1 else MUTED
                 d.ellipse((xx-4,461,xx+4,469),fill=color)
                 d.text((xx,482),f"Day {day}",anchor="mt",font=font(16),fill=color)
             for j,name in enumerate(names):
@@ -223,7 +216,7 @@ def states():
                 label(d,(x,162),captions[j],16,MUTED)
                 origin=(x+35,337)
                 def pos(z):
-                    return (origin[0]+655*z.real,origin[1]-655*z.imag)
+                    return (origin[0]+450*z.real,origin[1]-450*z.imag)
                 moved=history[j]*coeff[j]**carry
                 new=moved+add*inc[j]
                 d.line((x+3,337,x+305,337),fill=LINE,width=2)
@@ -257,9 +250,9 @@ def states():
                 bottom=704
                 def trace_point(day,value):
                     return (left+(right-left)*(day-dates[0])/(dates[-1]-dates[0]),
-                            bottom-310*value)
-                label(d,(x+3,522),"Real state  Re(z)",19,INK,True)
-                for value in (0,0.2,0.4):
+                            bottom-245*value)
+                label(d,(x+3,522),"State magnitude  |z|",19,INK,True)
+                for value in (0,0.2,0.4,0.6):
                     yy=trace_point(10,value)[1]
                     d.line((left,yy,right,yy),fill=LINE)
                     d.text((left-4,yy),f"{value:.1f}",anchor="rm",font=font(13),fill=MUTED)
@@ -267,19 +260,21 @@ def states():
                     xx=trace_point(day,0)[0]
                     d.text((xx,716),str(day),anchor="mt",font=font(14),fill=MUTED)
                 d.text(((left+right)/2,745),"Acquisition day",anchor="mm",font=font(16),fill=MUTED)
-                points=[trace_point(dates[0],0)]
-                points.extend(trace_point(dates[n],end.real)
-                              for n,(_,_,end) in enumerate(completed[j],1))
-                xx=trace_point(dates[k],0)[0]
-                d.line((xx,568,xx,bottom),fill=LINE)
-                if tick==36:
-                    points.append(trace_point(dates[k],new.real))
-                if len(points)>1:
-                    d.line(points,fill=SLATE_BLUE,width=3)
-                for px,py in points:
-                    d.ellipse((px-4,py-4,px+4,py+4),fill=SLATE_BLUE)
-                live_y=trace_point(dates[k],new.real)[1]
-                d.ellipse((xx-5,live_y-5,xx+5,live_y+5),outline=ORCHID,width=2)
+                intervals = completed[j] + [(history[j],coeff[j],new)]
+                for n,(start,factor,end) in enumerate(intervals):
+                    progress = carry if n==k-1 else 1
+                    path=[]
+                    for sample in range(33):
+                        u=progress*sample/32
+                        day=dates[n]+u*(dates[n+1]-dates[n])
+                        path.append(trace_point(day,abs(start)*abs(factor)**u))
+                    d.line(path,fill=COPPER,width=3)
+                    tip=path[-1]
+                    if progress==1:
+                        tip=trace_point(dates[n+1],abs(end))
+                        d.line((path[-1],tip),fill=ORCHID,width=3)
+                    px,py=tip
+                    d.ellipse((px-3,py-3,px+3,py+3),fill=INK)
             label(d,(34,398),"○ Previous state",18,SLATE_BLUE)
             label(d,(337,398),"→ Propagated history",18,COPPER)
             label(d,(683,398),"→ Input contribution",18,ORCHID)
