@@ -174,6 +174,7 @@ def states():
     dates = [10, 40, 50, 110, 130]
     inputs = [1.6, 1.0, 2.0, 1.3, 2.4]
     history = [0j, 0j, 0j]
+    completed = [[], [], []]
     names = ["Fixed-step SSM", "Decay + rotation", "TI-SSM"]
     captions = ["Fixed decay + current input", "Gap-driven history + current input",
                 "Gap decay, rotation + both inputs"]
@@ -197,6 +198,23 @@ def states():
             add=max(0,2*t-1)
             im,d=canvas(f"TI-SSM   /   UPDATE {k} OF 4",
                         f"Day {dates[k-1]} → {dates[k]}     ·     {gap}-day gap")
+            # The common timeline stays visible throughout all four updates.
+            board=Image.new("RGB",(1024,532),PAPER)
+            board.paste(im,(0,0))
+            im=board
+            d=ImageDraw.Draw(im)
+            timeline_x=[80+(day-dates[0])*7 for day in dates]
+            for idx in range(4):
+                x0,x1=timeline_x[idx:idx+2]
+                d.line((x0,465,x1,465),fill=LINE,width=3)
+                progress=1 if idx<k-1 else t if idx==k-1 else 0
+                if progress:
+                    d.line((x0,465,x0+(x1-x0)*progress,465),fill=COPPER,width=4)
+                d.text(((x0+x1)/2,450),f"{dates[idx+1]-dates[idx]} d",anchor="ms",font=font(15),fill=MUTED)
+            for idx,(day,xx) in enumerate(zip(dates,timeline_x)):
+                color=COPPER if idx<k or idx==k and tick==36 else MUTED
+                d.ellipse((xx-4,461,xx+4,469),fill=color)
+                d.text((xx,482),f"Day {day}",anchor="mt",font=font(16),fill=color)
             for j,name in enumerate(names):
                 x=33+331*j
                 if j:
@@ -214,6 +232,13 @@ def states():
                 label(d,(x+218,303),"Re (real)",15,MUTED)
                 d.polygon([(x+288,299),(x+281,295),(x+281,303)],fill=LINE)
                 d.polygon([(origin[0],190),(origin[0]-4,197),(origin[0]+4,197)],fill=LINE)
+                for step,(start,transition,end) in enumerate(completed[j],1):
+                    path=[pos(start*transition**(n/24)) for n in range(25)]
+                    d.line(path,fill=SLATE_BLUE,width=2)
+                    d.line((path[-1],pos(end)),fill=ORCHID,width=2)
+                    ex,ey=pos(end)
+                    d.ellipse((ex-3,ey-3,ex+3,ey+3),fill=INK)
+                    d.text((ex,ey+(12 if step%2 else -12)),str(step),anchor="mm",font=font(13,True),fill=INK)
                 if j and carry>0 and abs(history[j])>0:
                     trail=[pos(history[j]*coeff[j]**(carry*n/24)) for n in range(25)]
                     d.line(trail,fill=SLATE_BLUE,width=2)
@@ -222,14 +247,20 @@ def states():
                 arrow(d,origin,pos(moved),COPPER)
                 if add>0:
                     arrow(d,pos(moved),pos(new),ORCHID)
+                if tick==36:
+                    ex,ey=pos(new)
+                    d.text((ex,ey+(12 if k%2 else -12)),str(k),anchor="mm",font=font(13,True),fill=INK)
                 d.ellipse((hx-5,hy-5,hx+5,hy+5),outline=SLATE_BLUE,width=2)
                 label(d,(x,345),f"Retention {abs(coeff[j]):.0%}    Rotation {math.degrees(cmath.phase(coeff[j])):.0f}°",18,MUTED)
             label(d,(34,398),"○ Previous state",18,SLATE_BLUE)
             label(d,(337,398),"→ Propagated history",18,COPPER)
             label(d,(683,398),"→ Input contribution",18,ORCHID)
             frames.append(im)
-            durations.append(1800 if tick==36 else 240 if tick==18 else 65)
-        history=[c*z+b for c,z,b in zip(coeff,history,inc)]
+            durations.append(4600 if k==4 and tick==36 else 1800 if tick==36 else 240 if tick==18 else 65)
+        for j in range(3):
+            end=coeff[j]*history[j]+inc[j]
+            completed[j].append((history[j],coeff[j],end))
+            history[j]=end
     save(frames,durations,"ti-ssm-update.gif")
 
 
