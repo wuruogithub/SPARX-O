@@ -171,62 +171,49 @@ def arrow(d, start, end, color):
 
 
 def states():
-    days = [10,40,60,130]
-    timeline = [62,218,322,686]
     frames, durations = [], []
-    center=(285,277)
-    def point(z):
-        return (center[0]+330*z.real, center[1]-330*z.imag)
-    def scene(index,title,history,propagated,new,lines):
-        im,d=canvas("TI-SSM   /   ONE COMPLEX STATE CHANNEL",title)
-        d.line((62,141,686,141),fill=LINE,width=3)
-        for j,x in enumerate(timeline):
-            col=COPPER if j==2 else ORCHID
-            d.ellipse((x-6,135,x+6,147),fill=col if j<=index else LINE)
-            label(d,(x-20,151),str(days[j]),17,col if j==index else MUTED)
-        label(d,(750,126),"Acquisition day",19,MUTED)
-        d.line((100,277,460,277),fill=LINE,width=2)
-        d.line((285,195,285,356),fill=LINE,width=2)
-        label(d,(456,269),"Re",16,MUTED)
-        label(d,(292,187),"Im",16,MUTED)
-        arrow(d,point(0),point(history),SLATE_BLUE)
-        arrow(d,point(history),point(propagated),COPPER)
-        arrow(d,point(propagated),point(new),ORCHID)
-        for j,(s,col) in enumerate(lines):
-            label(d,(520,205+j*44),s,22,col,j==0)
-        for j,(s,c) in enumerate([("Previous state",SLATE_BLUE),("Decay + rotation",COPPER),("Input increment",ORCHID)]):
-            x=45+j*327
-            d.line((x,397,x+25,397),fill=c,width=4)
-            label(d,(x+34,381),s,20,c)
-        return im
-    z=0j
-    prev_day=None
-    prev_v=0.
-    for i,(day,v) in enumerate(zip(days,[2.,2.5,None,1.6])):
-        if i==0 or v is None:
-            title="Save the first valid input" if i==0 else "Skip the masked observation"
-            lines=[("Day 10 · first valid date",INK),("Elapsed time = 0 days",MUTED),("State starts at zero.",MUTED)] if i==0 else [
-                ("Day 60 · masked",COPPER),("Keep the state and input.",MUTED),("Day 40 stays the last valid date.",MUTED)]
-            frames.append(scene(i,title,z,z,z,lines))
-            durations.append(2200)
-            if i==0:
-                prev_day,prev_v=day,v
-            continue
-        gap=day-prev_day
-        tau=gap/365.2425
-        a=cmath.exp(complex(-2.5,2*math.pi)*tau)
-        p=a*z
-        increment=tau*(a*prev_v+v)/2
-        for step in range(21):
-            f=step/20
-            moved=cmath.exp(complex(-2.5,2*math.pi)*tau*min(2*f,1))*z
-            new=moved+max(2*f-1,0)*increment
-            frames.append(scene(i,"Advance to the next valid acquisition",z,moved,new,[
-                (f"Day {prev_day} → {day} · {gap} days",INK),
-                ("Propagate the previous state." if f<0.5 else "Add both endpoint inputs.",COPPER if f<0.5 else ORCHID),
-                (f"Retention {abs(a):.2f}   ·   rotation {360*tau:.0f}°",MUTED)]))
-            durations.append(1400 if step==20 else 80)
-        z,prev_day,prev_v=p+increment,day,v
+    phases = ["Start with the same stored state", "Carry history across the gap",
+              "Add the two endpoint inputs", "Read the updated state"]
+    for stage,title in enumerate(phases):
+        for step in range(19):
+            t=step/18
+            im,d=canvas("TI-SSM   /   ONE PIXEL, ONE STATE CHANNEL",title)
+            for index,gap in enumerate((30,90)):
+                left=36+index*496
+                origin=(left+106,305)
+                tau=gap/365.2425
+                z=complex(.65,0)
+                a=cmath.exp(complex(-2.5,2*math.pi)*tau)
+                moved=z*cmath.exp(complex(-2.5,2*math.pi)*tau*(0 if stage==0 else t if stage==1 else 1))
+                increment=tau*(a*1.2+1.8)/2
+                new=moved+increment*(0 if stage<2 else t if stage==2 else 1)
+                def point(v):
+                    return (origin[0]+140*v.real,origin[1]-140*v.imag)
+                label(d,(left,122),f"{gap}-day gap",27,INK,True)
+                label(d,(left,163),f"Day 40  →  Day {40+gap}",20,MUTED)
+                d.line((left+55,305,left+267,305),fill=LINE,width=2)
+                d.line((origin[0],195,origin[0],320),fill=LINE,width=2)
+                if stage>=3:
+                    px,py=point(new)
+                    d.line((px,py,px,305),fill=COPPER,width=2)
+                arrow(d,origin,point(z),SLATE_BLUE)
+                if stage>=1:
+                    arrow(d,origin,point(moved),COPPER)
+                if stage>=2:
+                    arrow(d,point(moved),point(new),ORCHID)
+                details=["Same history",f"{abs(a):.0%} retained", "Add interval-scaled",f"Real part: {new.real:.2f}"]
+                label(d,(left+250,222),details[stage],20,INK,True)
+                if stage==1:
+                    label(d,(left+250,258),f"{360*tau:.0f}° final rotation",18,MUTED)
+                if stage==2:
+                    label(d,(left+250,258),"input increment",19,ORCHID)
+            notes=["Both cases use identical inputs and model parameters.",
+                   "A longer gap shrinks and rotates the carried history further in this example.",
+                   "The previous and current inputs contribute to the new state (pink arrow).",
+                   "The layer projects the real part back into the current date feature."]
+            label(d,(36,368),notes[stage],22,INK)
+            frames.append(im)
+            durations.append(2400 if step==18 else 85)
     save(frames,durations,"ti-ssm-update.gif")
 
 

@@ -10,11 +10,11 @@ The animation follows a single 32 × 32 patch through the default 20-class model
 
 ## ⏱️ How TI-SSM advances between observations
 
-![Animated complex-state update for observations on days 10, 40 and 130, with day 60 masked.](assets/ti-ssm-update.gif)
+![Side-by-side updates of the same complex state across 30-day and 90-day observation gaps.](assets/ti-ssm-update.gif)
 
-Follow one state channel at one pixel. Day 10 supplies the first input. Day 40 advances the state by 30 days. The masked observation on day 60 leaves the state, stored input and last valid date unchanged. When day 130 arrives, TI-SSM therefore advances by **90 days**.
+Imagine a pixel last observed on day 40. If its next valid image arrives on day 70, the state advances by 30 days. If it arrives on day 130, the state advances by 90 days. The animation holds the starting state and both endpoint inputs fixed to isolate the effect of that gap.
 
-The slate-blue vector shows the previous state. As the copper segment grows, the history decays and rotates according to the effective interval. The orchid segment adds the contribution of the previous and current valid inputs. Its endpoint is the new state. The animation uses illustrative inputs, a decay rate of 2.5 per year, one rotation per year and a unit content adjustment. In the model, decay and rotation rates are learned per channel, and the current feature can rescale the elapsed interval. Each layer projects the real part of its 64-channel state back into the 160-channel observation feature.
+The blue arrow is the stored history. The copper arrow shows how much of it reaches the new date and how far it rotates. With the illustrative rates used here, the short gap retains 81% of the original magnitude and the long gap retains 54%. The pink arrow adds the interval-scaled contribution of the two inputs. The final horizontal coordinate is the real part that the layer projects back into the current observation feature. Masked dates are skipped when measuring the gap.
 
 ## 📊 Semantic segmentation results
 
@@ -33,7 +33,7 @@ Use Python 3.10 or 3.11 with a PyTorch build compatible with your environment. F
 python -m pip install -e .
 ```
 
-The Python model is exported as `SPARXO`. This example uses the same four acquisition dates as the TI-SSM animation. Dates are elapsed days since 2018-01-01. Each sample must have at least one valid observation.
+The Python model is exported as `SPARXO`. This example includes a masked acquisition on day 60. Dates are elapsed days since 2018-01-01. Each sample must have at least one valid observation.
 
 ```python
 import torch
