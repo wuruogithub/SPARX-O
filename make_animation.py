@@ -234,7 +234,7 @@ def states():
                 d.polygon([(origin[0],190),(origin[0]-4,197),(origin[0]+4,197)],fill=LINE)
                 for step,(start,transition,end) in enumerate(completed[j],1):
                     path=[pos(start*transition**(n/24)) for n in range(25)]
-                    d.line(path,fill=SLATE_BLUE,width=2)
+                    d.line(path,fill=COPPER,width=2)
                     d.line((path[-1],pos(end)),fill=ORCHID,width=2)
                     ex,ey=pos(end)
                     d.ellipse((ex-3,ey-3,ex+3,ey+3),fill=INK)
@@ -244,7 +244,7 @@ def states():
                     d.line(trail,fill=SLATE_BLUE,width=2)
                 # A hollow marker preserves the starting point when vectors overlap.
                 hx,hy=pos(history[j])
-                arrow(d,origin,pos(moved),COPPER)
+                arrow(d,pos(history[j]),pos(moved),COPPER)
                 if add>0:
                     arrow(d,pos(moved),pos(new),ORCHID)
                 if tick==36:
