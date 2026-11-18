@@ -171,11 +171,11 @@ def arrow(d, start, end, color):
 
 
 def states():
-    dates = [10, 40, 50, 110, 130]
+    dates = [0, 15, 35, 45, 90]
     inputs = [1.6, 1.0, 2.0, 1.3, 2.4]
     history = [0.22+0j] * 3
     completed = [[], [], []]
-    names = ["No-decay SSM", "Decay + rotation", "TI-SSM"]
+    names = ["SSM(ZOH)", "Decay + rotation", "TI-SSM"]
     captions = ["A = 1: hold, then add input", "History alone: no new input",
                 "Gap decay, rotation + both inputs"]
     frames, durations = [], []
@@ -196,7 +196,7 @@ def states():
             board.paste(im,(0,0))
             im=board
             d=ImageDraw.Draw(im)
-            timeline_x=[45+(day-dates[0])*934/120 for day in dates]
+            timeline_x=[45+(day-dates[0])*934/(dates[-1]-dates[0]) for day in dates]
             for idx in range(4):
                 x0,x1=timeline_x[idx:idx+2]
                 d.line((x0,465,x1,465),fill=LINE,width=3)

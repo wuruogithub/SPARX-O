@@ -12,9 +12,9 @@ The animation follows a single 32 × 32 patch through the default 20-class model
 
 ![Four updates with a no-decay SSM, propagation alone and TI-SSM. The lower panels plot state magnitude over acquisition time.](assets/ti-ssm-update.gif)
 
-All three examples start with a stored state of magnitude 0.22 on day 10. The upper row follows one channel in the complex plane; the lower row plots its magnitude against acquisition day. Copper traces history propagation and pink shows the contribution added at an observation.
+All three examples start with a stored state of magnitude 0.22 on day 0. Updates occur on days 15, 35, 45 and 90, after gaps of 15, 20, 10 and 45 days. The upper row follows one channel in the complex plane; the lower row plots its magnitude against acquisition day. Copper traces history propagation and pink shows the contribution added at an observation.
 
-- **No-decay SSM.** The history coefficient is exactly 1. Magnitude stays flat throughout every gap and changes only when an input arrives.
+- **SSM(ZOH).** This example uses a fixed unit model step and holds the input constant within that step. The history coefficient is exactly 1. Magnitude stays flat throughout every gap and changes only when an input arrives.
 - **Propagation alone.** The stored state decays and rotates without receiving new input. Its magnitude traces one continuous exponential decay across all four intervals.
 - **TI-SSM.** Each interval starts at the preceding updated state. Its magnitude decays until the next observation; the interval-weighted endpoint inputs then update the state at that date. Rotation is visible in the upper row.
 
